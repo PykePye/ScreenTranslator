@@ -63,7 +63,7 @@ Traditional OCR + translation pipelines fail on cluttered UIs, unusual fonts, an
 ### Build from source
 
 ```powershell
-git clone https://github.com/YOUR_USERNAME/snip-and-translate.git
+git clone https://github.com/PykePye/snip-and-translate.git
 cd snip-and-translate
 dotnet build
 dotnet run
@@ -170,7 +170,7 @@ Các pipeline OCR + dịch truyền thống thường thất bại với UI ph�
 ### Build từ source
 
 ```powershell
-git clone https://github.com/YOUR_USERNAME/snip-and-translate.git
+git clone https://github.com/PykePye/snip-and-translate.git
 cd snip-and-translate
 dotnet build
 dotnet run
