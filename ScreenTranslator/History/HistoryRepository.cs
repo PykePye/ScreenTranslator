@@ -57,12 +57,24 @@ public class HistoryRepository
             )");
     }
 
-    public void AddEntry(HistoryEntry entry)
+    public int AddEntry(HistoryEntry entry)
     {
         using var connection = new SqliteConnection(ConnectionString);
+        connection.Open();
+
         connection.Execute(
             "INSERT INTO history (CreatedAt, ImageBlob, TranslatedText, IsError) VALUES (@CreatedAt, @ImageBlob, @TranslatedText, @IsError)",
             entry);
+
+        return connection.ExecuteScalar<int>("SELECT last_insert_rowid()");
+    }
+
+    public void UpdateEntry(int id, string translatedText, int isError)
+    {
+        using var connection = new SqliteConnection(ConnectionString);
+        connection.Execute(
+            "UPDATE history SET TranslatedText = @translatedText, IsError = @isError WHERE Id = @id",
+            new { id, translatedText, isError });
     }
 
     public IEnumerable<HistoryEntry> GetLatest(int limit = 50)

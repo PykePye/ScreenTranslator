@@ -12,6 +12,8 @@ using ScreenTranslator.Snip;
 using ScreenTranslator.Settings;
 using ScreenTranslator.Translation;
 using ScreenTranslator.History;
+using ScreenTranslator.DailyReport;
+using ScreenTranslator.Writing;
 
 namespace ScreenTranslator;
 
@@ -23,6 +25,10 @@ public partial class App : Application
     private AppSettings _settings = new();
     private ResultChatWindow? _chatWindow;
     private HistoryRepository _historyRepo = null!;
+    private ReportRepository? _reportRepo;
+    private DailyReportWindow? _reportWindow;
+    private WritingHistoryStore? _writingHistoryStore;
+    private WritingAssistantWindow? _writingAssistantWindow;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -158,8 +164,19 @@ public partial class App : Application
 
     private async Task ProcessTranslation(byte[] imageBytes)
     {
+        var historyEntry = new HistoryEntry
+        {
+            ImageBlob = imageBytes,
+            TranslatedText = "Đang dịch...",
+            IsError = 0
+        };
+
+        historyEntry.Id = _historyRepo.AddEntry(historyEntry);
+        _historyRepo.Cleanup(_settings.HistoryRetentionLimit);
+
         if (string.IsNullOrEmpty(_settings.ApiKey))
         {
+            _historyRepo.UpdateEntry(historyEntry.Id, "Lỗi: Chưa thiết lập Gemini API Key.", 1);
             System.Windows.MessageBox.Show("Vui lòng thiết lập Gemini API Key trong Settings trước.");
             ShowSettings();
             return;
@@ -179,13 +196,7 @@ public partial class App : Application
 
             System.Windows.Clipboard.SetText(translation);
             
-            _historyRepo.AddEntry(new HistoryEntry
-            {
-                ImageBlob = imageBytes,
-                TranslatedText = translation,
-                IsError = 0
-            });
-            _historyRepo.Cleanup(_settings.HistoryRetentionLimit);
+            _historyRepo.UpdateEntry(historyEntry.Id, translation, 0);
 
             _chatWindow?.AddMessage(new TranslationMessage 
             { 
@@ -197,11 +208,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            _historyRepo.AddEntry(new HistoryEntry
-            {
-                TranslatedText = $"Lỗi: {ex.Message}",
-                IsError = 1
-            });
+            _historyRepo.UpdateEntry(historyEntry.Id, $"Lỗi: {ex.Message}", 1);
 
             _chatWindow?.AddMessage(new TranslationMessage 
             { 
@@ -219,6 +226,12 @@ public partial class App : Application
         var historyItem = new System.Windows.Forms.ToolStripMenuItem("Show History");
         historyItem.Click += (_, _) => { _chatWindow?.Show(); _chatWindow?.Activate(); };
 
+        var reportItem = new System.Windows.Forms.ToolStripMenuItem("Daily Report");
+        reportItem.Click += (_, _) => ShowDailyReport();
+
+        var writingAssistantItem = new System.Windows.Forms.ToolStripMenuItem("Writing Assistant");
+        writingAssistantItem.Click += (_, _) => ShowWritingAssistant();
+
         var settingsItem = new System.Windows.Forms.ToolStripMenuItem("Settings");
         settingsItem.Click += (_, _) => ShowSettings();
 
@@ -231,6 +244,8 @@ public partial class App : Application
         exitItem.Click += (_, _) => ExitApp();
 
         contextMenu.Items.Add(historyItem);
+        contextMenu.Items.Add(reportItem);
+        contextMenu.Items.Add(writingAssistantItem);
         contextMenu.Items.Add(settingsItem);
         contextMenu.Items.Add(pauseItem);
         contextMenu.Items.Add(separator);
@@ -245,6 +260,36 @@ public partial class App : Application
         };
 
         _trayIcon.DoubleClick += (_, _) => { _chatWindow?.Show(); _chatWindow?.Activate(); };
+    }
+
+    private void ShowDailyReport()
+    {
+        _reportRepo ??= new ReportRepository();
+
+        if (_reportWindow == null)
+        {
+            _reportWindow = new DailyReportWindow(_settings, _reportRepo);
+            _reportWindow.Closed += (_, _) => _reportWindow = null;
+        }
+
+        _reportWindow.Show();
+        _reportWindow.Activate();
+    }
+
+    private void ShowWritingAssistant()
+    {
+        _writingHistoryStore ??= new WritingHistoryStore();
+
+        if (_writingAssistantWindow == null)
+        {
+            _writingAssistantWindow = new WritingAssistantWindow(() => _settings, _writingHistoryStore);
+            _writingAssistantWindow.Closed += (_, _) => _writingAssistantWindow = null;
+        }
+
+        if (_chatWindow != null)
+            _writingAssistantWindow.PositionAbove(_chatWindow);
+        _writingAssistantWindow.Show();
+        _writingAssistantWindow.Activate();
     }
 
     private void ShowSettings()

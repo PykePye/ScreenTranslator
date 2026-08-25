@@ -57,6 +57,8 @@ public class SettingsStore
                 Model = settings.Model,
                 Hotkey = settings.Hotkey,
                 HistoryRetentionLimit = settings.HistoryRetentionLimit,
+                ReportOutputFolder = settings.ReportOutputFolder,
+                ReporterName = settings.ReporterName,
                 ApiKey = string.IsNullOrEmpty(settings.ApiKey) ? "" : Encrypt(settings.ApiKey)
             };
 

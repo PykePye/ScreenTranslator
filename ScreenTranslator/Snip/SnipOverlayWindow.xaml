@@ -9,20 +9,62 @@
         ShowInTaskbar="False"
         Cursor="Cross">
     <Grid x:Name="RootGrid">
-        <!-- Layer 1: Mask đen alpha với lỗ khoét cho vùng đã chọn -->
+        <!-- Lớp phủ tối, chừa trống vùng đang chọn. -->
         <Path x:Name="MaskPath" Fill="#80000000" IsHitTestVisible="False"/>
 
-        <!-- Layer 2: Border viền của vùng selection -->
-        <Rectangle x:Name="SelectionBorder"
-                   Stroke="#FF4FC3F7"
-                   StrokeThickness="2"
-                   Fill="Transparent"
-                   IsHitTestVisible="False"
-                   Visibility="Collapsed"/>
+        <!-- Nhận thao tác chọn vùng, kéo và thay đổi kích thước. -->
+        <Canvas x:Name="InputCanvas" Background="Transparent"/>
 
-        <!-- Layer 3: Hint text giữa màn hình khi chưa chọn -->
+        <!-- Khung xem trước và thanh xác nhận nằm trên lớp nhận chuột. -->
+        <Canvas x:Name="SelectionCanvas">
+            <Rectangle x:Name="SelectionBorder"
+                       Stroke="#FF4FC3F7"
+                       StrokeThickness="2"
+                       Fill="Transparent"
+                       IsHitTestVisible="False"
+                       Visibility="Collapsed"/>
+
+            <Rectangle x:Name="TopLeftHandle" Width="10" Height="10" Fill="#FF4FC3F7"
+                       IsHitTestVisible="False" Visibility="Collapsed"/>
+            <Rectangle x:Name="TopRightHandle" Width="10" Height="10" Fill="#FF4FC3F7"
+                       IsHitTestVisible="False" Visibility="Collapsed"/>
+            <Rectangle x:Name="BottomLeftHandle" Width="10" Height="10" Fill="#FF4FC3F7"
+                       IsHitTestVisible="False" Visibility="Collapsed"/>
+            <Rectangle x:Name="BottomRightHandle" Width="10" Height="10" Fill="#FF4FC3F7"
+                       IsHitTestVisible="False" Visibility="Collapsed"/>
+
+            <Border x:Name="ConfirmationPanel"
+                    Width="90"
+                    Height="38"
+                    Visibility="Collapsed"
+                    Background="#FF1C1C1E"
+                    CornerRadius="7"
+                    Padding="3">
+                <StackPanel Orientation="Horizontal">
+                    <Button Width="40" Height="30"
+                            Content="✓"
+                            FontSize="18"
+                            FontWeight="Bold"
+                            Foreground="White"
+                            Background="#FF34C759"
+                            BorderThickness="0"
+                            ToolTip="Dùng vùng đã chọn"
+                            Click="Confirm_Click"/>
+                    <Button Width="40" Height="30"
+                            Margin="4,0,0,0"
+                            Content="×"
+                            FontSize="20"
+                            Foreground="White"
+                            Background="#FFFF3B30"
+                            BorderThickness="0"
+                            ToolTip="Huỷ thao tác quét"
+                            Click="Discard_Click"/>
+                </StackPanel>
+            </Border>
+        </Canvas>
+
         <TextBlock x:Name="HintText"
-                   Text="Kéo chuột để chọn vùng cần dịch — Escape để hủy"
+                   Text="Kéo chuột để chọn vùng cần dịch — Escape để huỷ"
                    Foreground="White"
                    FontSize="16"
                    HorizontalAlignment="Center"
@@ -32,8 +74,5 @@
                 <DropShadowEffect Color="Black" BlurRadius="8" ShadowDepth="0"/>
             </TextBlock.Effect>
         </TextBlock>
-
-        <!-- Layer 4: Hit-test layer — Canvas trong suốt nhận mouse events -->
-        <Canvas x:Name="InputCanvas" Background="Transparent"/>
     </Grid>
 </Window>
