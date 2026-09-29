@@ -2,9 +2,12 @@ namespace ScreenTranslator.Settings;
 
 public class AppSettings
 {
+    // Keys created after gemini-2.5-flash was closed to new users get 404 on it
+    public const string DefaultModel = "gemini-3.8-flash";
+
     public string ApiKey { get; set; } = string.Empty;
     public string DefaultTargetLanguage { get; set; } = "Vietnamese";
-    public string Model { get; set; } = "gemini-2.5-flash"; // Default to discovered model
+    public string Model { get; set; } = DefaultModel;
     public string Hotkey { get; set; } = "D";
     public int HistoryRetentionLimit { get; set; } = 500;
 

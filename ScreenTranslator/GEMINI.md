@@ -32,7 +32,8 @@ deployed to the factory floor.
 - **UI Framework:** WPF (primary) + Windows Forms (for `NotifyIcon` only)
 - **AI Provider:** Google Gemini API
   - Endpoint: `https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key=...`
-  - Default model: `gemini-2.5-flash` (`AppSettings.Model`)
+  - Default model: `gemini-3.8-flash` (`AppSettings.DefaultModel`); keys created recently get 404 on `gemini-2.5-flash`
+  - The model box in Settings is editable, so any name returned by List Models can be typed in
   - Auth: API key in the query string, stored via DPAPI
   - `Settings → List Models` calls `/v1beta/models` to discover what the key can actually reach
 - **Persistence:** SQLite + Dapper (`history.db`, `report.db`) plus two Markdown logs for the

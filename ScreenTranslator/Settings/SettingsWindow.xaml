@@ -34,12 +34,11 @@
         </ComboBox>
 
         <Label Content="AI Model:" Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Margin="0,5"/>
-        <ComboBox x:Name="ModelCombo" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" Margin="5,5">
+        <!-- Editable so any name from "List Available Models" can be typed in -->
+        <ComboBox x:Name="ModelCombo" Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Center" Margin="5,5" IsEditable="True">
+            <ComboBoxItem Content="gemini-3.8-flash"/>
             <ComboBoxItem Content="gemini-2.5-flash"/>
             <ComboBoxItem Content="gemini-2.5-pro"/>
-            <ComboBoxItem Content="gemini-2.0-flash"/>
-            <ComboBoxItem Content="gemini-1.5-flash"/>
-            <ComboBoxItem Content="gemini-1.5-pro"/>
         </ComboBox>
 
         <Label Content="Hotkey (Ctrl+Shift+?):" Grid.Row="3" Grid.Column="0" VerticalAlignment="Center" Margin="0,5"/>

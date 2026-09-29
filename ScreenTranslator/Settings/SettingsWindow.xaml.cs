@@ -30,14 +30,8 @@ public partial class SettingsWindow : Window
             }
         }
 
-        foreach (ComboBoxItem item in ModelCombo.Items)
-        {
-            if (item.Content.ToString() == _settings.Model)
-            {
-                ModelCombo.SelectedItem = item;
-                break;
-            }
-        }
+        // Text rather than SelectedItem: the saved model may not be one of the preset items
+        ModelCombo.Text = _settings.Model;
 
         foreach (ComboBoxItem item in HotkeyCombo.Items)
         {
@@ -52,11 +46,17 @@ public partial class SettingsWindow : Window
 
     public bool IsSuccess { get; private set; }
 
+    private string SelectedModel()
+    {
+        var model = ModelCombo.Text.Trim();
+        return string.IsNullOrEmpty(model) ? AppSettings.DefaultModel : model;
+    }
+
     private async void OnTestKeyClick(object sender, RoutedEventArgs e)
     {
         var tempKey = ApiKeyBox.Password;
-        var tempModel = (ModelCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "gemini-2.5-flash";
-        
+        var tempModel = SelectedModel();
+
         TestStatusText.Text = "Đang kiểm tra kết nối...";
         TestStatusText.Foreground = System.Windows.Media.Brushes.Blue;
 
@@ -88,7 +88,7 @@ public partial class SettingsWindow : Window
     {
         _settings.ApiKey = ApiKeyBox.Password;
         _settings.DefaultTargetLanguage = (TargetLanguageCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "Vietnamese";
-        _settings.Model = (ModelCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "gemini-2.5-flash";
+        _settings.Model = SelectedModel();
         _settings.Hotkey = (HotkeyCombo.SelectedItem as ComboBoxItem)?.Content.ToString() ?? "D";
         
         SettingsStore.Save(_settings);

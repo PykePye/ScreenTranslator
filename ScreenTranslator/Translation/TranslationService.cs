@@ -1,9 +1,11 @@
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ScreenTranslator.Settings;
 using ScreenTranslator.Writing;
 
 namespace ScreenTranslator.Translation;
@@ -14,12 +16,39 @@ public class TranslationService
     private readonly string _apiKey;
     private readonly string _model;
 
+    // Gemini answers 503 "high demand" in bursts that usually clear within seconds
+    private const int MaxRetries = 3;
+
     public TranslationService(string apiKey, string model)
     {
         _apiKey = apiKey?.Trim() ?? string.Empty;
-        _model = model?.Trim() ?? "gemini-1.5-flash";
+        _model = model?.Trim() ?? AppSettings.DefaultModel;
         _httpClient = new HttpClient();
     }
+
+    /// <summary>
+    /// POSTs the request, retrying server-side overload errors with 2s/4s/8s backoff.
+    /// onRetry receives (attempt, MaxRetries) before each wait so the caller can show progress.
+    /// </summary>
+    private async Task<HttpResponseMessage> PostWithRetryAsync(
+        string url, string json, CancellationToken cancellationToken, Action<int, int>? onRetry = null)
+    {
+        for (var attempt = 1; ; attempt++)
+        {
+            var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            if (attempt > MaxRetries || !IsTransient(response.StatusCode)) return response;
+
+            response.Dispose();
+            onRetry?.Invoke(attempt, MaxRetries);
+            await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)), cancellationToken);
+        }
+    }
+
+    private static bool IsTransient(HttpStatusCode status) =>
+        status is HttpStatusCode.InternalServerError
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
 
     public async Task<string> ListModelsAsync()
     {
@@ -111,10 +140,9 @@ public class TranslationService
         };
 
         var json = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
-        var response = await _httpClient.PostAsync(url, content, cancellationToken);
+        var response = await PostWithRetryAsync(url, json, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -139,7 +167,8 @@ public class TranslationService
         return t;
     }
 
-    public async Task<string> TranslateImageAsync(byte[] imageBytes, string targetLanguage, CancellationToken cancellationToken)
+    public async Task<string> TranslateImageAsync(
+        byte[] imageBytes, string targetLanguage, CancellationToken cancellationToken, Action<int, int>? onRetry = null)
     {
         if (string.IsNullOrEmpty(_apiKey)) throw new Exception("API Key is missing.");
 
@@ -165,12 +194,11 @@ public class TranslationService
         };
 
         var json = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
 
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
-        var response = await _httpClient.PostAsync(url, content, cancellationToken);
-        
+        var response = await PostWithRetryAsync(url, json, cancellationToken, onRetry);
+
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -215,10 +243,9 @@ public class TranslationService
         };
 
         var json = JsonSerializer.Serialize(requestBody);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
         var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_model}:generateContent?key={_apiKey}";
 
-        var response = await _httpClient.PostAsync(url, content, cancellationToken);
+        var response = await PostWithRetryAsync(url, json, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
