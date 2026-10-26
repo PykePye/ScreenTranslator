@@ -167,7 +167,11 @@ public class TranslationService
         return t;
     }
 
-    public async Task<string> TranslateImageAsync(
+    /// <summary>
+    /// Reads the text to translate out of the image and translates it in the same call, so the
+    /// source text and the translation always cover the same content.
+    /// </summary>
+    public async Task<ImageTranslationResult> TranslateImageAsync(
         byte[] imageBytes, string targetLanguage, CancellationToken cancellationToken, Action<int, int>? onRetry = null)
     {
         if (string.IsNullOrEmpty(_apiKey)) throw new Exception("API Key is missing.");
@@ -190,7 +194,8 @@ public class TranslationService
                         new { inline_data = new { mime_type = "image/png", data = base64Image } }
                     }
                 }
-            }
+            },
+            generationConfig = new { responseMimeType = "application/json" }
         };
 
         var json = JsonSerializer.Serialize(requestBody);
@@ -207,7 +212,41 @@ public class TranslationService
 
         var responseData = await response.Content.ReadFromJsonAsync<GeminiResponse>(cancellationToken: cancellationToken);
         var text = responseData?.Candidates?.FirstOrDefault()?.Content?.Parts?.FirstOrDefault()?.Text;
-        return text ?? string.Empty;
+        return ParseImageTranslation(text);
+    }
+
+    /// <summary>
+    /// Reads the {sourceText, translation} pair. A reply that is not that JSON is kept whole as the
+    /// translation, so a model ignoring the format costs the source text but never the translation.
+    /// </summary>
+    private static ImageTranslationResult ParseImageTranslation(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return new ImageTranslationResult();
+
+        try
+        {
+            var root = JsonSerializer.Deserialize<JsonElement>(ExtractJson(text));
+            if (root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("translation", out var translation)
+                && translation.ValueKind == JsonValueKind.String)
+            {
+                var sourceText = root.TryGetProperty("sourceText", out var source) && source.ValueKind == JsonValueKind.String
+                    ? source.GetString()
+                    : null;
+
+                return new ImageTranslationResult
+                {
+                    SourceText = sourceText?.Trim() ?? string.Empty,
+                    Translation = translation.GetString()?.Trim() ?? string.Empty
+                };
+            }
+        }
+        catch (Exception)
+        {
+            // Not JSON at all; fall through and keep the whole reply as the translation
+        }
+
+        return new ImageTranslationResult { Translation = text.Trim() };
     }
 
     /// <summary>
@@ -366,6 +405,13 @@ public sealed record WritingAudience(string Id, string VietnameseLabel, string P
 
     public static WritingAudience FromId(string? id) =>
         All.FirstOrDefault(a => string.Equals(a.Id, id, StringComparison.OrdinalIgnoreCase)) ?? Colleague;
+}
+
+public sealed class ImageTranslationResult
+{
+    /// <summary>The text that was translated, in its original language; empty when the reply was not JSON.</summary>
+    public string SourceText { get; set; } = string.Empty;
+    public string Translation { get; set; } = string.Empty;
 }
 
 public sealed class WritingImprovementResult

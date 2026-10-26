@@ -15,7 +15,8 @@ hotkey, then extend the same API client to the two writing tasks that come up da
 2. A snipping overlay appears (Snipping Tool style)
 3. User drags to select a region of the screen
 4. The selected region is sent to Gemini for translation
-5. Result appears in the chat window and is auto-copied to the clipboard
+5. Result appears in the chat window and is auto-copied to the clipboard; the source text read
+   from the image appears above it with its own copy button
 
 **Primary use case:** translating foreign-language UI of factory machine-operating software
 (Chinese, Japanese, Korean) into Vietnamese for factory workers with limited foreign-language
@@ -114,9 +115,19 @@ system instruction, and no conversation state carries between calls.
 
 ### 1. Snip translation — `TranslateImageAsync`
 
-`Prompts/ImageTranslation.md` plus `inline_data` with the PNG as base64. Terse and single-purpose:
-identify the visible text, translate to the target language, output only the translation, and keep
-the visual grouping of separate UI elements as line breaks. Result is returned verbatim.
+`Prompts/ImageTranslation.md` plus `inline_data` with the PNG as base64, with
+`responseMimeType = "application/json"`. One call returns both `sourceText` (the text that was
+translated, verbatim in its original language) and `translation`, so the two always cover the same
+content. The chat window shows the source above the translation with its own "Copy gốc" button;
+the translation is still what gets auto-copied.
+
+What counts as source text depends on the screenshot. For a chat app (Zalo, WeChat, LINE, ...)
+only the message bodies count: sender names, timestamps, date separators, read receipts,
+reactions and quoted reply previews are dropped from both fields. For anything else — the primary
+case, machine UI — all visible text counts, because there a time or a status *is* the content.
+
+`ParseImageTranslation` reads the pair; a reply that is not that JSON is kept whole as the
+translation with an empty source, so a model ignoring the format never loses the translation.
 
 ### 2. Daily report translation — `TranslateTextStyledAsync`
 
@@ -250,6 +261,7 @@ CREATE TABLE history (
   Id INTEGER PRIMARY KEY AUTOINCREMENT,
   CreatedAt TEXT NOT NULL,
   ImageBlob BLOB,
+  OriginalText TEXT NOT NULL DEFAULT '',  -- added by ALTER TABLE on existing databases
   TranslatedText TEXT NOT NULL,
   IsError INTEGER DEFAULT 0
 );
@@ -298,7 +310,8 @@ CREATE TABLE template     (Id INTEGER PRIMARY KEY AUTOINCREMENT, Title TEXT NOT 
    rather than throwing, and the build stays green.
 
 9. **The model does not reliably honour "output only X".** Every call site has a cleanup pass —
-   `CleanResult` for the report translator, `ExtractJson` for the writing assistant. Keep them.
+   `CleanResult` for the report translator, `ExtractJson` for the writing assistant,
+   `ParseImageTranslation` for the snip. Keep them.
 
 10. **A locked `.exe` fails the build, not the code.** If `dotnet build` reports MSB3021/MSB3027 on
     `ScreenTranslator.exe`, the tray app is still running — exit it from the tray first.

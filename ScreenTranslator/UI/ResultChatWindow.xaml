@@ -58,10 +58,17 @@
                                             </Style>
                                         </Image.Style>
                                     </Image>
+                                    <!-- Source text read from the image -->
+                                    <Border x:Name="SourceBlock" Background="#F2F2F7" CornerRadius="6" Padding="8,6" Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding OriginalText}" TextWrapping="Wrap" Foreground="#3A3A3C" FontSize="12"/>
+                                    </Border>
                                     <TextBlock Text="{Binding TranslatedText}" TextWrapping="Wrap" Foreground="#1C1C1E" FontSize="14"/>
                                     <Grid Margin="0,5,0,0">
                                         <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm:ss'}" FontSize="10" Foreground="#8E8E93" HorizontalAlignment="Left"/>
-                                        <Button Content="Copy" HorizontalAlignment="Right" FontSize="10" Padding="5,1" Click="Copy_Click" Tag="{Binding TranslatedText}"/>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <Button x:Name="CopySourceButton" Content="Copy gốc" ToolTip="Copy văn bản gốc trong ảnh" FontSize="10" Padding="5,1" Margin="0,0,5,0" Click="Copy_Click" Tag="{Binding OriginalText}"/>
+                                            <Button Content="Copy dịch" ToolTip="Copy bản dịch" FontSize="10" Padding="5,1" Click="Copy_Click" Tag="{Binding TranslatedText}"/>
+                                        </StackPanel>
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -69,6 +76,10 @@
                                 <DataTrigger Binding="{Binding IsError}" Value="True">
                                     <Setter TargetName="MessageBorder" Property="Background" Value="#FEE2E2"/>
                                     <Setter TargetName="MessageBorder" Property="BorderBrush" Value="#FCA5A5"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding OriginalText}" Value="">
+                                    <Setter TargetName="SourceBlock" Property="Visibility" Value="Collapsed"/>
+                                    <Setter TargetName="CopySourceButton" Property="Visibility" Value="Collapsed"/>
                                 </DataTrigger>
                             </DataTemplate.Triggers>
                         </DataTemplate>

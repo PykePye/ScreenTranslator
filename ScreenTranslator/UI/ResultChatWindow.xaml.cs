@@ -43,6 +43,7 @@ public partial class ResultChatWindow : Window
                 Messages.Add(new TranslationMessage
                 {
                     Timestamp = DateTime.Parse(entry.CreatedAt),
+                    OriginalText = entry.OriginalText ?? string.Empty,
                     TranslatedText = entry.TranslatedText,
                     IsError = entry.IsError == 1,
                     ImageSnippet = (entry.ImageBlob != null && entry.ImageBlob.Length > 0) 

@@ -52,9 +52,18 @@ public class HistoryRepository
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 CreatedAt TEXT NOT NULL,
                 ImageBlob BLOB,
+                OriginalText TEXT NOT NULL DEFAULT '',
                 TranslatedText TEXT NOT NULL,
                 IsError INTEGER DEFAULT 0
             )");
+
+        // Databases created before the source text was kept lack the column; add it in place
+        // rather than dropping the table, so the existing history survives the upgrade
+        var columns = connection.Query<string>("SELECT name FROM pragma_table_info('history')");
+        if (!columns.Contains("OriginalText"))
+        {
+            connection.Execute("ALTER TABLE history ADD COLUMN OriginalText TEXT NOT NULL DEFAULT ''");
+        }
     }
 
     public int AddEntry(HistoryEntry entry)
@@ -69,12 +78,12 @@ public class HistoryRepository
         return connection.ExecuteScalar<int>("SELECT last_insert_rowid()");
     }
 
-    public void UpdateEntry(int id, string translatedText, int isError)
+    public void UpdateEntry(int id, string translatedText, int isError, string originalText = "")
     {
         using var connection = new SqliteConnection(ConnectionString);
         connection.Execute(
-            "UPDATE history SET TranslatedText = @translatedText, IsError = @isError WHERE Id = @id",
-            new { id, translatedText, isError });
+            "UPDATE history SET OriginalText = @originalText, TranslatedText = @translatedText, IsError = @isError WHERE Id = @id",
+            new { id, originalText, translatedText, isError });
     }
 
     public IEnumerable<HistoryEntry> GetLatest(int limit = 50)

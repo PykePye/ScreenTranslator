@@ -192,17 +192,18 @@ public partial class App : Application
             var bitmapSource = BitmapFrame.Create(ms, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
 
             var translator = new TranslationService(_settings.ApiKey, _settings.Model);
-            var translation = await translator.TranslateImageAsync(
+            var result = await translator.TranslateImageAsync(
                 imageBytes, _settings.DefaultTargetLanguage, CancellationToken.None,
                 (attempt, max) => _chatWindow?.SetStatus($"Máy chủ Gemini đang bận, thử lại {attempt}/{max}...", "busy"));
 
-            System.Windows.Clipboard.SetText(translation);
-            
-            _historyRepo.UpdateEntry(historyEntry.Id, translation, 0);
+            System.Windows.Clipboard.SetText(result.Translation);
 
-            _chatWindow?.AddMessage(new TranslationMessage 
-            { 
-                TranslatedText = translation,
+            _historyRepo.UpdateEntry(historyEntry.Id, result.Translation, 0, result.SourceText);
+
+            _chatWindow?.AddMessage(new TranslationMessage
+            {
+                OriginalText = result.SourceText,
+                TranslatedText = result.Translation,
                 ImageSnippet = bitmapSource,
                 IsError = false
             });
